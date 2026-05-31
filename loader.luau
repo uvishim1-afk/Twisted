@@ -1,5 +1,5 @@
 -- ========================================
--- TWISTEDHOOK v5 - ESP DEBUG
+-- TWISTEDHOOK v6 - ESP + SPEED
 -- Testing on Roblox Rivals
 -- ========================================
 
@@ -43,8 +43,8 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 200)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+MainFrame.Size = UDim2.new(0, 300, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -130)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
@@ -61,7 +61,7 @@ Title.BorderSizePixel = 0
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "ESP DEBUG"
+Title.Text = "TWISTEDHOOK v6"
 Title.Parent = MainFrame
 
 -- Debug info frame
@@ -77,28 +77,47 @@ InfoFrame.TextXAlignment = Enum.TextXAlignment.Left
 InfoFrame.TextYAlignment = Enum.TextYAlignment.Top
 InfoFrame.Parent = MainFrame
 
--- Toggle button
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Size = UDim2.new(0.9, 0, 0, 30)
-ToggleButton.Position = UDim2.new(0.05, 0, 0, 165)
-ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-ToggleButton.TextColor3 = Color3.new(1, 1, 1)
-ToggleButton.TextSize = 12
-ToggleButton.Font = Enum.Font.GothamBold
-ToggleButton.Text = "TOGGLE ESP"
-ToggleButton.BorderSizePixel = 0
-ToggleButton.Parent = MainFrame
+-- ESP Toggle button
+local ESPButton = Instance.new("TextButton")
+ESPButton.Size = UDim2.new(0.9, 0, 0, 30)
+ESPButton.Position = UDim2.new(0.05, 0, 0, 160)
+ESPButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+ESPButton.TextColor3 = Color3.new(1, 1, 1)
+ESPButton.TextSize = 12
+ESPButton.Font = Enum.Font.GothamBold
+ESPButton.Text = "[ OFF ] ESP"
+ESPButton.BorderSizePixel = 0
+ESPButton.Parent = MainFrame
 
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 6)
-ToggleCorner.Parent = ToggleButton
+local ESPCorner = Instance.new("UICorner")
+ESPCorner.CornerRadius = UDim.new(0, 6)
+ESPCorner.Parent = ESPButton
+
+-- Speed Toggle button
+local SpeedButton = Instance.new("TextButton")
+SpeedButton.Size = UDim2.new(0.9, 0, 0, 30)
+SpeedButton.Position = UDim2.new(0.05, 0, 0, 195)
+SpeedButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+SpeedButton.TextColor3 = Color3.new(1, 1, 1)
+SpeedButton.TextSize = 12
+SpeedButton.Font = Enum.Font.GothamBold
+SpeedButton.Text = "[ OFF ] SPEED"
+SpeedButton.BorderSizePixel = 0
+SpeedButton.Parent = MainFrame
+
+local SpeedCorner = Instance.new("UICorner")
+SpeedCorner.CornerRadius = UDim.new(0, 6)
+SpeedCorner.Parent = SpeedButton
 
 print("[DEBUG] UI Created")
 
--- ==================== CHARACTER SCANNER ====================
+-- ==================== FEATURE FLAGS ====================
 local ESPEnabled = false
+local SpeedEnabled = false
 local ESPBoxes = {}
+local OriginalSpeed = 16
 
+-- ==================== CHARACTER SCANNER ====================
 local function ScanPlayerStructure()
     print("\n=== SCANNING PLAYER STRUCTURE ===")
     
@@ -111,7 +130,6 @@ local function ScanPlayerStructure()
             for _, child in pairs(char:GetChildren()) do
                 print("  - " .. child.Name .. " (" .. child.ClassName .. ")")
                 
-                -- If it's a humanoid root part or similar, show its children
                 if child.ClassName == "Part" or child.ClassName == "MeshPart" then
                     for _, subchild in pairs(child:GetChildren()) do
                         print("    - " .. subchild.Name .. " (" .. subchild.ClassName .. ")")
@@ -128,7 +146,6 @@ local function CreateESPBox(player, character)
     
     print("[ESP] Attempting to create box for " .. player.Name)
     
-    -- Try different detection methods
     local rootPart = character:FindFirstChild("HumanoidRootPart") 
         or character:FindFirstChild("Torso")
         or character:FindFirstChildOfClass("Part")
@@ -140,7 +157,6 @@ local function CreateESPBox(player, character)
     
     print("[ESP] Found root part: " .. rootPart.Name)
     
-    -- Create billboard GUI
     local billboard = Instance.new("BillboardGui")
     billboard.Adornee = rootPart
     billboard.MaxDistance = math.huge
@@ -179,7 +195,6 @@ local function UpdateESP()
         return
     end
     
-    -- Create ESP for all players
     for _, player in pairs(Players:GetPlayers()) do
         if player and player ~= LocalPlayer and player.Character then
             if not ESPBoxes[player] then
@@ -189,55 +204,82 @@ local function UpdateESP()
     end
 end
 
--- ==================== BUTTON CLICK ====================
-ToggleButton.MouseButton1Click:Connect(function()
+-- ==================== SPEED SYSTEM ====================
+local function UpdateSpeed()
+    if not LocalPlayer.Character then return end
+    
+    local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+    if not humanoid then return end
+    
+    if SpeedEnabled then
+        humanoid.WalkSpeed = OriginalSpeed * 1.5
+    else
+        humanoid.WalkSpeed = OriginalSpeed
+    end
+end
+
+-- Track original speed when character loads
+LocalPlayer.CharacterAdded:Connect(function(character)
+    wait(0.1)
+    local humanoid = character:FindFirstChild("Humanoid")
+    if humanoid then
+        OriginalSpeed = humanoid.WalkSpeed
+        print("[SPEED] Original speed set to: " .. OriginalSpeed)
+    end
+end)
+
+-- Store original speed on first run
+if LocalPlayer.Character then
+    local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+    if humanoid then
+        OriginalSpeed = humanoid.WalkSpeed
+        print("[SPEED] Original speed: " .. OriginalSpeed)
+    end
+end
+
+-- ==================== BUTTON CLICKS ====================
+ESPButton.MouseButton1Click:Connect(function()
     ESPEnabled = not ESPEnabled
     print("[DEBUG] ESP Toggled: " .. (ESPEnabled and "ON" or "OFF"))
     
     if ESPEnabled then
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-        ToggleButton.Text = "ESP ON"
-        print("[DEBUG] Calling UpdateESP()...")
-        UpdateESP()
+        ESPButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+        ESPButton.Text = "[ ON ] ESP"
     else
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-        ToggleButton.Text = "TOGGLE ESP"
-        UpdateESP()
+        ESPButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+        ESPButton.Text = "[ OFF ] ESP"
     end
+    
+    UpdateESP()
 end)
 
--- ==================== AUTO SCAN BUTTON ====================
-local ScanButton = Instance.new("TextButton")
-ScanButton.Size = UDim2.new(0.4, 0, 0, 30)
-ScanButton.Position = UDim2.new(0.05, 0, 0.8, 0)
-ScanButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-ScanButton.TextColor3 = Color3.new(1, 1, 1)
-ScanButton.TextSize = 11
-ScanButton.Font = Enum.Font.Gotham
-ScanButton.Text = "SCAN"
-ScanButton.BorderSizePixel = 0
-ScanButton.Parent = MainFrame
-
-local ScanCorner = Instance.new("UICorner")
-ScanCorner.CornerRadius = UDim.new(0, 6)
-ScanCorner.Parent = ScanButton
-
-ScanButton.MouseButton1Click:Connect(function()
-    ScanPlayerStructure()
+SpeedButton.MouseButton1Click:Connect(function()
+    SpeedEnabled = not SpeedEnabled
+    print("[DEBUG] Speed Toggled: " .. (SpeedEnabled and "ON" or "OFF"))
+    
+    if SpeedEnabled then
+        SpeedButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+        SpeedButton.Text = "[ ON ] SPEED"
+    else
+        SpeedButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+        SpeedButton.Text = "[ OFF ] SPEED"
+    end
+    
+    UpdateSpeed()
 end)
 
 -- ==================== MAIN LOOP ====================
 RunService.Heartbeat:Connect(function()
     pcall(function()
         UpdateESP()
+        UpdateSpeed()
         
         -- Update info
         local playerCount = #Players:GetPlayers()
-        InfoFrame.Text = "Players: " .. playerCount .. "\nESP: " .. (ESPEnabled and "ON" or "OFF") .. "\nBoxes: " .. tostring(#ESPBoxes)
+        InfoFrame.Text = "Players: " .. playerCount .. "\nESP: " .. (ESPEnabled and "ON" or "OFF") .. "\nSpeed: " .. (SpeedEnabled and "ON" or "OFF") .. "\nBoxes: " .. tostring(#ESPBoxes)
     end)
 end)
 
 print("[DEBUG] Loop connected")
-print("✓ Debug script loaded!")
-print("✓ Click TOGGLE ESP button")
-print("✓ Click SCAN to see player structure")
+print("✓ Script loaded!")
+print("✓ Toggle ESP and Speed buttons")
