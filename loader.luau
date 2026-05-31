@@ -1,5 +1,5 @@
 -- ========================================
--- TWISTEDHOOK v6 - ESP + SPEED
+-- TWISTEDHOOK v7 - Mobile Friendly
 -- Testing on Roblox Rivals
 -- ========================================
 
@@ -13,6 +13,7 @@ print("[DEBUG] Script starting...")
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
 if not LocalPlayer then
@@ -43,8 +44,8 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = PlayerGui
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 260)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -130)
+MainFrame.Size = UDim2.new(0, 300, 0, 300)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -150)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
@@ -61,53 +62,48 @@ Title.BorderSizePixel = 0
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.TextSize = 14
 Title.Font = Enum.Font.GothamBold
-Title.Text = "TWISTEDHOOK v6"
+Title.Text = "TWISTEDHOOK v7"
 Title.Parent = MainFrame
 
--- Debug info frame
-local InfoFrame = Instance.new("TextLabel")
-InfoFrame.Size = UDim2.new(1, -10, 1, -50)
-InfoFrame.Position = UDim2.new(0, 5, 0, 45)
-InfoFrame.BackgroundTransparency = 1
-InfoFrame.TextColor3 = Color3.new(1, 1, 1)
-InfoFrame.TextSize = 11
-InfoFrame.Font = Enum.Font.Gotham
-InfoFrame.TextWrapped = true
-InfoFrame.TextXAlignment = Enum.TextXAlignment.Left
-InfoFrame.TextYAlignment = Enum.TextYAlignment.Top
-InfoFrame.Parent = MainFrame
+-- Draggable
+local Dragging = false
+local DragStart = nil
+local StartPos = nil
 
--- ESP Toggle button
-local ESPButton = Instance.new("TextButton")
-ESPButton.Size = UDim2.new(0.9, 0, 0, 30)
-ESPButton.Position = UDim2.new(0.05, 0, 0, 160)
-ESPButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-ESPButton.TextColor3 = Color3.new(1, 1, 1)
-ESPButton.TextSize = 12
-ESPButton.Font = Enum.Font.GothamBold
-ESPButton.Text = "[ OFF ] ESP"
-ESPButton.BorderSizePixel = 0
-ESPButton.Parent = MainFrame
+Title.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        Dragging = true
+        DragStart = input.Position
+        StartPos = MainFrame.Position
+    end
+end)
 
-local ESPCorner = Instance.new("UICorner")
-ESPCorner.CornerRadius = UDim.new(0, 6)
-ESPCorner.Parent = ESPButton
+Title.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        Dragging = false
+    end
+end)
 
--- Speed Toggle button
-local SpeedButton = Instance.new("TextButton")
-SpeedButton.Size = UDim2.new(0.9, 0, 0, 30)
-SpeedButton.Position = UDim2.new(0.05, 0, 0, 195)
-SpeedButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-SpeedButton.TextColor3 = Color3.new(1, 1, 1)
-SpeedButton.TextSize = 12
-SpeedButton.Font = Enum.Font.GothamBold
-SpeedButton.Text = "[ OFF ] SPEED"
-SpeedButton.BorderSizePixel = 0
-SpeedButton.Parent = MainFrame
+UserInputService.InputChanged:Connect(function(input)
+    if Dragging and DragStart and StartPos then
+        local delta = input.Position - DragStart
+        MainFrame.Position = StartPos + UDim2.new(0, delta.X, 0, delta.Y)
+    end
+end)
 
-local SpeedCorner = Instance.new("UICorner")
-SpeedCorner.CornerRadius = UDim.new(0, 6)
-SpeedCorner.Parent = SpeedButton
+-- Status display
+local StatusFrame = Instance.new("TextLabel")
+StatusFrame.Size = UDim2.new(1, -10, 0, 80)
+StatusFrame.Position = UDim2.new(0, 5, 0, 45)
+StatusFrame.BackgroundTransparency = 1
+StatusFrame.TextColor3 = Color3.new(1, 1, 1)
+StatusFrame.TextSize = 12
+StatusFrame.Font = Enum.Font.Gotham
+StatusFrame.TextWrapped = true
+StatusFrame.TextXAlignment = Enum.TextXAlignment.Left
+StatusFrame.TextYAlignment = Enum.TextYAlignment.Top
+StatusFrame.Parent = MainFrame
 
 print("[DEBUG] UI Created")
 
@@ -116,29 +112,6 @@ local ESPEnabled = false
 local SpeedEnabled = false
 local ESPBoxes = {}
 local OriginalSpeed = 16
-
--- ==================== CHARACTER SCANNER ====================
-local function ScanPlayerStructure()
-    print("\n=== SCANNING PLAYER STRUCTURE ===")
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player and player ~= LocalPlayer and player.Character then
-            print("\n[PLAYER] " .. player.Name)
-            
-            local char = player.Character
-            print("[CHAR CHILDREN]")
-            for _, child in pairs(char:GetChildren()) do
-                print("  - " .. child.Name .. " (" .. child.ClassName .. ")")
-                
-                if child.ClassName == "Part" or child.ClassName == "MeshPart" then
-                    for _, subchild in pairs(child:GetChildren()) do
-                        print("    - " .. subchild.Name .. " (" .. subchild.ClassName .. ")")
-                    end
-                end
-            end
-        end
-    end
-end
 
 -- ==================== ESP SYSTEM ====================
 local function CreateESPBox(player, character)
@@ -157,20 +130,23 @@ local function CreateESPBox(player, character)
     
     print("[ESP] Found root part: " .. rootPart.Name)
     
+    -- Create billboard GUI
     local billboard = Instance.new("BillboardGui")
     billboard.Adornee = rootPart
     billboard.MaxDistance = math.huge
     billboard.Size = UDim2.new(4, 0, 5, 0)
     billboard.Parent = rootPart
     
+    -- Main frame for ESP box
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 1, 0)
     frame.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    frame.BackgroundTransparency = 0.5
+    frame.BackgroundTransparency = 0.3  -- More transparent so it shows through
     frame.BorderSizePixel = 2
     frame.BorderColor3 = Color3.fromRGB(255, 255, 0)
     frame.Parent = billboard
     
+    -- Player name label
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, 0, 0.3, 0)
     label.BackgroundTransparency = 1
@@ -195,6 +171,7 @@ local function UpdateESP()
         return
     end
     
+    -- Add ESP to all players
     for _, player in pairs(Players:GetPlayers()) do
         if player and player ~= LocalPlayer and player.Character then
             if not ESPBoxes[player] then
@@ -203,6 +180,14 @@ local function UpdateESP()
         end
     end
 end
+
+-- Clean up ESP when player leaves
+Players.PlayerRemoving:Connect(function(player)
+    if ESPBoxes[player] then
+        pcall(function() ESPBoxes[player]:Destroy() end)
+        ESPBoxes[player] = nil
+    end
+end)
 
 -- ==================== SPEED SYSTEM ====================
 local function UpdateSpeed()
@@ -237,36 +222,76 @@ if LocalPlayer.Character then
     end
 end
 
--- ==================== BUTTON CLICKS ====================
-ESPButton.MouseButton1Click:Connect(function()
-    ESPEnabled = not ESPEnabled
-    print("[DEBUG] ESP Toggled: " .. (ESPEnabled and "ON" or "OFF"))
+-- ==================== BUTTON CREATION ====================
+local function CreateButton(yPosition, buttonName, featureName, callback)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(0.9, 0, 0, 35)
+    Button.Position = UDim2.new(0.05, 0, 0, yPosition)
+    Button.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    Button.TextColor3 = Color3.new(1, 1, 1)
+    Button.TextSize = 13
+    Button.Font = Enum.Font.GothamBold
+    Button.Text = "[ OFF ] " .. buttonName
+    Button.BorderSizePixel = 0
+    Button.Parent = MainFrame
     
-    if ESPEnabled then
-        ESPButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-        ESPButton.Text = "[ ON ] ESP"
-    else
-        ESPButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-        ESPButton.Text = "[ OFF ] ESP"
+    local ButtonCorner = Instance.new("UICorner")
+    ButtonCorner.CornerRadius = UDim.new(0, 6)
+    ButtonCorner.Parent = Button
+    
+    local State = false
+    
+    local function UpdateButton()
+        if State then
+            Button.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+            Button.Text = "[ ON ] " .. buttonName
+            Button.TextColor3 = Color3.fromRGB(0, 0, 0)
+        else
+            Button.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+            Button.Text = "[ OFF ] " .. buttonName
+            Button.TextColor3 = Color3.new(1, 1, 1)
+        end
     end
     
+    Button.MouseButton1Click:Connect(function()
+        State = not State
+        UpdateButton()
+        callback(State)
+        print("[TWISTEDHOOK] " .. featureName .. " = " .. (State and "ON" or "OFF"))
+    end)
+    
+    Button.Activated:Connect(function()
+        State = not State
+        UpdateButton()
+        callback(State)
+        print("[TWISTEDHOOK] " .. featureName .. " = " .. (State and "ON" or "OFF"))
+    end)
+    
+    Button.MouseEnter:Connect(function()
+        if not State then
+            Button.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+        end
+    end)
+    
+    Button.MouseLeave:Connect(function()
+        UpdateButton()
+    end)
+    
+    return Button, function() return State end
+end
+
+-- Create buttons
+local ESPButton, getESPState = CreateButton(140, "ESP", "ESP", function(state)
+    ESPEnabled = state
     UpdateESP()
 end)
 
-SpeedButton.MouseButton1Click:Connect(function()
-    SpeedEnabled = not SpeedEnabled
-    print("[DEBUG] Speed Toggled: " .. (SpeedEnabled and "ON" or "OFF"))
-    
-    if SpeedEnabled then
-        SpeedButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-        SpeedButton.Text = "[ ON ] SPEED"
-    else
-        SpeedButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-        SpeedButton.Text = "[ OFF ] SPEED"
-    end
-    
+local SpeedButton, getSpeedState = CreateButton(185, "SPEED", "Speed Boost", function(state)
+    SpeedEnabled = state
     UpdateSpeed()
 end)
+
+print("[DEBUG] Buttons created")
 
 -- ==================== MAIN LOOP ====================
 RunService.Heartbeat:Connect(function()
@@ -274,12 +299,13 @@ RunService.Heartbeat:Connect(function()
         UpdateESP()
         UpdateSpeed()
         
-        -- Update info
+        -- Update status display
         local playerCount = #Players:GetPlayers()
-        InfoFrame.Text = "Players: " .. playerCount .. "\nESP: " .. (ESPEnabled and "ON" or "OFF") .. "\nSpeed: " .. (SpeedEnabled and "ON" or "OFF") .. "\nBoxes: " .. tostring(#ESPBoxes)
+        StatusFrame.Text = "Players: " .. playerCount .. "\nESP: " .. (ESPEnabled and "✓ ON" or "✗ OFF") .. "\nSpeed: " .. (SpeedEnabled and "✓ ON" or "✗ OFF") .. "\nBoxes: " .. tostring(#ESPBoxes)
     end)
 end)
 
 print("[DEBUG] Loop connected")
 print("✓ Script loaded!")
-print("✓ Toggle ESP and Speed buttons")
+print("✓ TAP buttons to toggle features")
+print("✓ DRAG title to move menu")
