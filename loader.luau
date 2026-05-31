@@ -1,7 +1,5 @@
 -- ========================================
--- TWISTEDHOOK v3.2 - FIXED Edition
--- Roblox Rivals Exploit | All Features Fixed
--- Silent Aim + Skin Changer + Fixed FOV Circle
+-- TWISTEDHOOK v4.1 - Fixed Features
 -- ========================================
 
 if getgenv().TwistedhookLoaded then
@@ -10,486 +8,306 @@ if getgenv().TwistedhookLoaded then
 end
 
 getgenv().TwistedhookLoaded = true
-print("[TWISTEDHOOK v3.2] Initializing...")
+print("[TWISTEDHOOK] Script starting...")
 
--- Core Services with error handling
+-- Get services safely
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 if not LocalPlayer then
-    warn("[TWISTEDHOOK] LocalPlayer not found!")
+    warn("[ERROR] LocalPlayer not found!")
     return
 end
 
+-- Wait for character
+if not LocalPlayer.Character then
+    LocalPlayer.CharacterAdded:Wait()
+end
+
+local Camera = workspace.CurrentCamera
 local Mouse = LocalPlayer:GetMouse()
 
 -- Config
 local Config = {
-    ESP = { Enabled = false, ShowHealth = true },
-    Aimbot = { Enabled = false, FOV = 300, Smoothness = 0.1, Strength = 3, ShowFOV = false, SilentAim = false },
-    Speed = { Enabled = false, Value = 2 },
-    Skins = { Enabled = false, SkinColor = Color3.fromRGB(100, 0, 200) },
+    ESP = { Enabled = false },
+    Aimbot = { Enabled = false, FOV = 300 },
+    Speed = { Enabled = false, BaseSpeed = 16 },
+    Skins = { Enabled = false },
 }
 
--- Wait for PlayerGui with timeout
-local PlayerGui
-local maxWait = 10
-local waitTime = 0
-while not PlayerGui and waitTime < maxWait do
-    PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
-    if not PlayerGui then
-        wait(0.1)
-        waitTime = waitTime + 0.1
-    end
-end
-
+-- Get PlayerGui
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
 if not PlayerGui then
-    warn("[TWISTEDHOOK] PlayerGui timeout!")
+    warn("[ERROR] PlayerGui not found!")
     return
 end
 
-print("[TWISTEDHOOK] PlayerGui loaded")
+-- ==================== CREATE UI ====================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "TwistedhookUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
 
--- ==================== MAIN SCREEN GUI ====================
-local MainGui = Instance.new("ScreenGui")
-MainGui.Name = "TwistedhookMain"
-MainGui.ResetOnSpawn = false
-MainGui.Parent = PlayerGui
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 280, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -140, 0.15, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
 
--- Menu Frame
-local MenuFrame = Instance.new("Frame")
-MenuFrame.Name = "Menu"
-MenuFrame.Size = UDim2.new(0, 320, 0, 520)
-MenuFrame.Position = UDim2.new(0.5, -160, 0.1, 0)
-MenuFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-MenuFrame.BorderSizePixel = 0
-MenuFrame.Parent = MainGui
-
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 10)
-Corner.Parent = MenuFrame
-
-local Stroke = Instance.new("UIStroke")
-Stroke.Color = Color3.fromRGB(100, 50, 200)
-Stroke.Thickness = 2
-Stroke.Parent = MenuFrame
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
 
 -- Title
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 50)
-Title.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
-Title.BorderSizePixel = 0
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 18
-Title.Font = Enum.Font.GothamBold
-Title.Text = "⚡ TWISTEDHOOK v3.2"
-Title.Parent = MenuFrame
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, 0, 0, 40)
+TitleLabel.BackgroundColor3 = Color3.fromRGB(10, 10, 20)
+TitleLabel.BorderSizePixel = 0
+TitleLabel.TextColor3 = Color3.new(1, 1, 1)
+TitleLabel.TextSize = 16
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.Text = "⚡ TWISTEDHOOK v4.1"
+TitleLabel.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 10)
-TitleCorner.Parent = Title
+TitleCorner.CornerRadius = UDim.new(0, 8)
+TitleCorner.Parent = TitleLabel
 
--- Close Button
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 35, 0, 35)
-CloseBtn.Position = UDim2.new(1, -40, 0, 7.5)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.TextSize = 16
-CloseBtn.Font = Enum.Font.GothamBold
-CloseBtn.Text = "X"
-CloseBtn.BorderSizePixel = 0
-CloseBtn.Parent = Title
-
-local CloseBtnCorner = Instance.new("UICorner")
-CloseBtnCorner.CornerRadius = UDim.new(0, 6)
-CloseBtnCorner.Parent = CloseBtn
-
--- Scroll Frame
+-- ScrollFrame for buttons
 local ScrollFrame = Instance.new("ScrollingFrame")
-ScrollFrame.Size = UDim2.new(1, 0, 1, -50)
-ScrollFrame.Position = UDim2.new(0, 0, 0, 50)
-ScrollFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+ScrollFrame.Size = UDim2.new(1, 0, 1, -40)
+ScrollFrame.Position = UDim2.new(0, 0, 0, 40)
+ScrollFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 ScrollFrame.BorderSizePixel = 0
-ScrollFrame.ScrollBarThickness = 5
-ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(150, 80, 220)
-ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 700)
-ScrollFrame.Parent = MenuFrame
+ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 200)
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 350)
+ScrollFrame.Parent = MainFrame
 
-local Layout = Instance.new("UIListLayout")
-Layout.Padding = UDim.new(0, 8)
-Layout.Parent = ScrollFrame
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0, 5)
+UIListLayout.Parent = ScrollFrame
 
-local Padding = Instance.new("UIPadding")
-Padding.PaddingTop = UDim.new(0, 8)
-Padding.PaddingBottom = UDim.new(0, 8)
-Padding.PaddingLeft = UDim.new(0, 8)
-Padding.PaddingRight = UDim.new(0, 8)
-Padding.Parent = ScrollFrame
+local UIPadding = Instance.new("UIPadding")
+UIPadding.PaddingLeft = UDim.new(0, 8)
+UIPadding.PaddingRight = UDim.new(0, 8)
+UIPadding.PaddingTop = UDim.new(0, 8)
+UIPadding.PaddingBottom = UDim.new(0, 8)
+UIPadding.Parent = ScrollFrame
 
-print("[TWISTEDHOOK] Menu UI created")
+print("[TWISTEDHOOK] UI Created")
 
--- ==================== BUTTON FUNCTION ====================
-local function CreateButton(parent, name, icon, callback)
+-- ==================== BUTTON CREATOR ====================
+local ButtonStates = {}
+
+local function CreateToggleButton(name, key)
+    local ButtonContainer = Instance.new("Frame")
+    ButtonContainer.Size = UDim2.new(1, 0, 0, 35)
+    ButtonContainer.BackgroundTransparency = 1
+    ButtonContainer.Parent = ScrollFrame
+    
     local Button = Instance.new("TextButton")
-    Button.Name = name
-    Button.Size = UDim2.new(1, 0, 0, 40)
-    Button.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    Button.Size = UDim2.new(1, 0, 1, 0)
+    Button.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
     Button.TextColor3 = Color3.fromRGB(200, 200, 200)
-    Button.TextSize = 12
-    Button.Font = Enum.Font.GothamSemibold
-    Button.Text = icon .. " " .. name
+    Button.TextSize = 14
+    Button.Font = Enum.Font.Gotham
+    Button.Text = "[ OFF ] " .. name
     Button.BorderSizePixel = 0
-    Button.Parent = parent
+    Button.Parent = ButtonContainer
     
     local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 8)
+    BtnCorner.CornerRadius = UDim.new(0, 6)
     BtnCorner.Parent = Button
     
-    local Indicator = Instance.new("Frame")
-    Indicator.Size = UDim2.new(0, 8, 0, 8)
-    Indicator.Position = UDim2.new(0, 8, 0.5, -4)
-    Indicator.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
-    Indicator.BorderSizePixel = 0
-    Indicator.Parent = Button
+    ButtonStates[key] = false
     
-    local IndicatorCorner = Instance.new("UICorner")
-    IndicatorCorner.CornerRadius = UDim.new(0, 2)
-    IndicatorCorner.Parent = Indicator
-    
-    local State = false
-    
-    local function UpdateVisuals()
-        if State then
-            Button.BackgroundColor3 = Color3.fromRGB(100, 40, 200)
-            Indicator.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
-            Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    local function UpdateButton()
+        if ButtonStates[key] then
+            Button.BackgroundColor3 = Color3.fromRGB(100, 50, 200)
+            Button.Text = "[ ON ] " .. name
+            Button.TextColor3 = Color3.fromRGB(100, 255, 100)
         else
-            Button.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
-            Indicator.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+            Button.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+            Button.Text = "[ OFF ] " .. name
             Button.TextColor3 = Color3.fromRGB(200, 200, 200)
         end
     end
     
     Button.MouseButton1Click:Connect(function()
-        State = not State
-        UpdateVisuals()
-        callback(State)
+        ButtonStates[key] = not ButtonStates[key]
+        UpdateButton()
+        print("[TWISTEDHOOK] " .. name .. " = " .. (ButtonStates[key] and "ON" or "OFF"))
     end)
     
     Button.MouseEnter:Connect(function()
-        Button.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+        if not ButtonStates[key] then
+            Button.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+        end
     end)
     
     Button.MouseLeave:Connect(function()
-        UpdateVisuals()
+        UpdateButton()
     end)
-    
-    return Button
 end
 
--- Create Buttons
-CreateButton(ScrollFrame, "ESP", "👁", function(state)
-    Config.ESP.Enabled = state
-    print("[TWISTEDHOOK] ESP " .. (state and "ENABLED" or "DISABLED"))
-end)
-
-CreateButton(ScrollFrame, "Aimbot", "🎯", function(state)
-    Config.Aimbot.Enabled = state
-    print("[TWISTEDHOOK] Aimbot " .. (state and "ENABLED" or "DISABLED"))
-end)
-
-CreateButton(ScrollFrame, "Silent Aim", "🔇", function(state)
-    Config.Aimbot.SilentAim = state
-    print("[TWISTEDHOOK] Silent Aim " .. (state and "ENABLED" or "DISABLED"))
-end)
-
-CreateButton(ScrollFrame, "FOV Circle", "⭕", function(state)
-    Config.Aimbot.ShowFOV = state
-    print("[TWISTEDHOOK] FOV Circle " .. (state and "ENABLED" or "DISABLED"))
-end)
-
-CreateButton(ScrollFrame, "Speed Boost", "⚡", function(state)
-    Config.Speed.Enabled = state
-    print("[TWISTEDHOOK] Speed Boost " .. (state and "ENABLED" or "DISABLED"))
-end)
-
-CreateButton(ScrollFrame, "Skin Changer", "🎨", function(state)
-    Config.Skins.Enabled = state
-    print("[TWISTEDHOOK] Skin Changer " .. (state and "ENABLED" or "DISABLED"))
-end)
+-- Create buttons
+CreateToggleButton("ESP", "esp")
+CreateToggleButton("Aimbot", "aimbot")
+CreateToggleButton("FOV Circle", "fov")
+CreateToggleButton("Speed Boost", "speed")
+CreateToggleButton("Skin Changer", "skins")
 
 print("[TWISTEDHOOK] Buttons created")
 
--- ==================== DRAGGABLE ====================
+-- ==================== DRAGGABLE MENU ====================
 local Dragging = false
 local DragStart = nil
-local FrameStart = nil
+local StartPos = nil
 
-Title.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
+TitleLabel.InputBegan:Connect(function(input, gp)
+    if gp then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         Dragging = true
         DragStart = Mouse.Position
-        FrameStart = MenuFrame.Position
+        StartPos = MainFrame.Position
     end
 end)
 
-Title.InputEnded:Connect(function(input)
+TitleLabel.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         Dragging = false
     end
 end)
 
 Mouse.Move:Connect(function()
-    if Dragging and DragStart and FrameStart then
-        local delta = Mouse.Position - DragStart
-        MenuFrame.Position = FrameStart + UDim2.new(0, delta.X, 0, delta.Y)
+    if Dragging and DragStart and StartPos then
+        local Delta = Mouse.Position - DragStart
+        MainFrame.Position = StartPos + UDim2.new(0, Delta.X, 0, Delta.Y)
     end
 end)
 
--- Minimize Button
-local MinBtn = Instance.new("TextButton")
-MinBtn.Size = UDim2.new(0, 50, 0, 50)
-MinBtn.Position = UDim2.new(0, 20, 0, 20)
-MinBtn.BackgroundColor3 = Color3.fromRGB(120, 50, 220)
-MinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinBtn.TextSize = 20
-MinBtn.Font = Enum.Font.GothamBold
-MinBtn.Text = "⚡"
-MinBtn.Visible = false
-MinBtn.ZIndex = 1000
-MinBtn.BorderSizePixel = 0
-MinBtn.Parent = MainGui
-
-local MinBtnCorner = Instance.new("UICorner")
-MinBtnCorner.CornerRadius = UDim.new(0, 10)
-MinBtnCorner.Parent = MinBtn
-
-CloseBtn.MouseButton1Click:Connect(function()
-    MenuFrame.Visible = false
-    MinBtn.Visible = true
+-- ==================== TOGGLE MENU KEY ====================
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.P then
+        MainFrame.Visible = not MainFrame.Visible
+        print("[TWISTEDHOOK] Menu toggled: " .. (MainFrame.Visible and "SHOWN" or "HIDDEN"))
+    end
 end)
 
-MinBtn.MouseButton1Click:Connect(function()
-    MenuFrame.Visible = true
-    MinBtn.Visible = false
-end)
+print("[TWISTEDHOOK] Menu controls bound")
 
-print("[TWISTEDHOOK] Menu complete")
+-- ==================== ESP IMPLEMENTATION ====================
+local ESPTable = {}
 
--- ==================== ESP SYSTEM ====================
-local ESPObjects = {}
-
-local function CreateESP(player, character)
-    if not character or not player then return end
-    
-    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoidRootPart then return end
-    
-    -- Remove old ESP
-    if ESPObjects[player] then
-        pcall(function()
-            ESPObjects[player]:Destroy()
-        end)
-        ESPObjects[player] = nil
-    end
-    
-    -- Create new ESP
-    local billboardGui = Instance.new("BillboardGui")
-    billboardGui.Adornee = humanoidRootPart
-    billboardGui.MaxDistance = math.huge
-    billboardGui.Size = UDim2.new(4, 0, 5, 0)
-    billboardGui.Parent = humanoidRootPart
-    
-    local espFrame = Instance.new("Frame")
-    espFrame.BackgroundColor3 = Color3.fromRGB(100, 0, 200)
-    espFrame.BackgroundTransparency = 0.2
-    espFrame.Size = UDim2.new(1, 0, 1, 0)
-    espFrame.BorderSizePixel = 0
-    espFrame.Parent = billboardGui
-    
-    local espStroke = Instance.new("UIStroke")
-    espStroke.Color = Color3.fromRGB(200, 100, 255)
-    espStroke.Thickness = 3
-    espStroke.Parent = espFrame
-    
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Size = UDim2.new(1, 0, 0.25, 0)
-    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    nameLabel.TextSize = 14
-    nameLabel.Font = Enum.Font.GothamBold
-    nameLabel.Text = player.Name
-    nameLabel.Parent = espFrame
-    
-    if Config.ESP.ShowHealth then
-        local healthBg = Instance.new("Frame")
-        healthBg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        healthBg.BackgroundTransparency = 0.4
-        healthBg.Size = UDim2.new(0.8, 0, 0.1, 0)
-        healthBg.Position = UDim2.new(0.1, 0, 0.75, 0)
-        healthBg.BorderSizePixel = 0
-        healthBg.Parent = espFrame
-        
-        local healthBar = Instance.new("Frame")
-        healthBar.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-        healthBar.Size = UDim2.new(1, 0, 1, 0)
-        healthBar.BorderSizePixel = 0
-        healthBar.Parent = healthBg
-        
-        ESPObjects[player] = billboardGui
-        
-        -- Update health bar
-        local humanoid = character:FindFirstChild("Humanoid")
-        if humanoid then
-            local maxHealth = humanoid.MaxHealth
-            local function UpdateHealth()
-                if humanoid and billboardGui and billboardGui.Parent and maxHealth > 0 then
-                    local percent = math.max(0, humanoid.Health / maxHealth)
-                    healthBar.Size = UDim2.new(percent, 0, 1, 0)
-                end
-            end
-            humanoid.HealthChanged:Connect(UpdateHealth)
-            UpdateHealth()
-        end
-    else
-        ESPObjects[player] = billboardGui
-    end
-end
-
-local function UpdateESP()
-    if not Config.ESP.Enabled then
-        for player, obj in pairs(ESPObjects) do
-            if obj then
+local function ESP_Update()
+    -- Clear ESP if disabled
+    if not ButtonStates["esp"] then
+        for player, obj in pairs(ESPTable) do
+            if obj and obj.Parent then
                 pcall(function() obj:Destroy() end)
             end
-            ESPObjects[player] = nil
+            ESPTable[player] = nil
         end
         return
     end
     
+    -- Add ESP to new players
     for _, player in pairs(Players:GetPlayers()) do
         if player and player ~= LocalPlayer and player.Character then
-            if not ESPObjects[player] then
-                CreateESP(player, player.Character)
+            local root = player.Character:FindFirstChild("HumanoidRootPart")
+            if root and not ESPTable[player] then
+                local billboard = Instance.new("BillboardGui")
+                billboard.Adornee = root
+                billboard.MaxDistance = math.huge
+                billboard.Size = UDim2.new(3, 0, 4, 0)
+                billboard.Parent = root
+                
+                local frame = Instance.new("Frame")
+                frame.Size = UDim2.new(1, 0, 1, 0)
+                frame.BackgroundColor3 = Color3.fromRGB(100, 0, 200)
+                frame.BackgroundTransparency = 0.3
+                frame.BorderSizePixel = 0
+                frame.Parent = billboard
+                
+                local stroke = Instance.new("UIStroke")
+                stroke.Color = Color3.fromRGB(200, 100, 255)
+                stroke.Thickness = 2
+                stroke.Parent = frame
+                
+                local label = Instance.new("TextLabel")
+                label.Size = UDim2.new(1, 0, 0.3, 0)
+                label.BackgroundTransparency = 1
+                label.TextColor3 = Color3.new(1, 1, 1)
+                label.TextSize = 12
+                label.Font = Enum.Font.GothamBold
+                label.Text = player.Name
+                label.Parent = frame
+                
+                ESPTable[player] = billboard
+                print("[TWISTEDHOOK] ESP added for " .. player.Name)
             end
         end
     end
 end
 
-Players.PlayerAdded:Connect(function(player)
-    if player then
-        player.CharacterAdded:Connect(function(character)
-            wait(0.1)
-            if Config.ESP.Enabled and character then
-                CreateESP(player, character)
-            end
-        end)
-    end
-end)
-
+-- Remove ESP when player leaves
 Players.PlayerRemoving:Connect(function(player)
-    if player and ESPObjects[player] then
-        pcall(function() 
-            if ESPObjects[player] then
-                ESPObjects[player]:Destroy() 
-            end
-        end)
-        ESPObjects[player] = nil
+    if ESPTable[player] then
+        pcall(function() ESPTable[player]:Destroy() end)
+        ESPTable[player] = nil
     end
 end)
 
-print("[TWISTEDHOOK] ESP system loaded")
+-- ==================== SPEED BOOST ====================
+local OriginalSpeed = 16
 
--- ==================== FOV CIRCLE (FOLLOWS MOUSE) ====================
-local FOVGui = Instance.new("ScreenGui")
-FOVGui.Name = "FOVGui"
-FOVGui.ResetOnSpawn = false
-FOVGui.ZIndex = 1
-FOVGui.Parent = PlayerGui
-
-local FOVCanvas = Instance.new("Frame")
-FOVCanvas.Name = "Canvas"
-FOVCanvas.Size = UDim2.new(1, 0, 1, 0)
-FOVCanvas.BackgroundTransparency = 1
-FOVCanvas.BorderSizePixel = 0
-FOVCanvas.ZIndex = 1
-FOVCanvas.Parent = FOVGui
-
-local lastFOVUpdate = tick()
-
-local function DrawFOVCircle()
-    if not Config.Aimbot.ShowFOV or not Config.Aimbot.Enabled then
-        if FOVCanvas:FindFirstChild("FOVCircle") then
-            FOVCanvas:ClearAllChildren()
-        end
-        return
-    end
+local function Speed_Update()
+    if not LocalPlayer.Character then return end
     
-    -- Throttle updates to improve performance
-    if tick() - lastFOVUpdate < 0.016 then
-        return
-    end
-    lastFOVUpdate = tick()
+    local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+    if not humanoid then return end
     
-    pcall(function()
-        FOVCanvas:ClearAllChildren()
-        
-        local centerX = Mouse.X
-        local centerY = Mouse.Y
-        local radius = Config.Aimbot.FOV
-        local segments = 30
-        
-        for i = 1, segments do
-            local angle1 = (i - 1) * (2 * math.pi / segments)
-            local angle2 = i * (2 * math.pi / segments)
-            
-            local x1 = math.cos(angle1) * radius
-            local y1 = math.sin(angle1) * radius
-            local x2 = math.cos(angle2) * radius
-            local y2 = math.sin(angle2) * radius
-            
-            local line = Instance.new("Frame")
-            line.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
-            line.BorderSizePixel = 0
-            line.ZIndex = 1
-            line.Parent = FOVCanvas
-            
-            local length = math.sqrt((x2 - x1)^2 + (y2 - y1)^2)
-            local angle = math.atan2(y2 - y1, x2 - x1)
-            
-            line.Size = UDim2.new(0, length, 0, 1)
-            line.Position = UDim2.new(0, centerX + x1, 0, centerY + y1)
-            line.Rotation = math.deg(angle)
-        end
-        
-        -- Center dot
-        local dot = Instance.new("Frame")
-        dot.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-        dot.Size = UDim2.new(0, 5, 0, 5)
-        dot.Position = UDim2.new(0, centerX - 2.5, 0, centerY - 2.5)
-        dot.BorderSizePixel = 0
-        dot.ZIndex = 1
-        dot.Parent = FOVCanvas
-        
-        local dotCorner = Instance.new("UICorner")
-        dotCorner.CornerRadius = UDim.new(0.5, 0)
-        dotCorner.Parent = dot
-    end)
+    if ButtonStates["speed"] then
+        humanoid.WalkSpeed = OriginalSpeed * 2
+        print("[TWISTEDHOOK] Speed set to " .. (OriginalSpeed * 2))
+    else
+        humanoid.WalkSpeed = OriginalSpeed
+    end
 end
 
-print("[TWISTEDHOOK] FOV circle created")
+LocalPlayer.CharacterAdded:Connect(function(character)
+    wait(0.2)
+    local humanoid = character:FindFirstChild("Humanoid")
+    if humanoid then
+        OriginalSpeed = humanoid.WalkSpeed
+        print("[TWISTEDHOOK] Original speed: " .. OriginalSpeed)
+    end
+end)
 
--- ==================== AIMBOT + SILENT AIM ====================
-local function FindClosestEnemy()
-    if not LocalPlayer or not LocalPlayer.Character then return nil end
+-- ==================== SKIN CHANGER ====================
+local function Skins_Update()
+    if not ButtonStates["skins"] or not LocalPlayer.Character then return end
     
-    local myRoot = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return nil end
+    for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Color = Color3.fromRGB(100, 0, 200)
+            part.Material = Enum.Material.Neon
+        end
+    end
+end
+
+-- ==================== AIMBOT ====================
+local function FindClosestEnemy()
+    if not LocalPlayer.Character then return nil end
+    
+    local myPos = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myPos then return nil end
     
     local closest = nil
     local closestDist = Config.Aimbot.FOV
@@ -500,13 +318,10 @@ local function FindClosestEnemy()
             local humanoid = player.Character:FindFirstChild("Humanoid")
             
             if root and humanoid and humanoid.Health > 0 then
-                local screenPos = Camera:WorldToScreenPoint(root.Position)
-                local mousePos = Vector2.new(Mouse.X, Mouse.Y)
-                local screenDist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-                
-                if screenDist < closestDist then
+                local dist = (root.Position - myPos.Position).Magnitude
+                if dist < closestDist then
                     closest = root
-                    closestDist = screenDist
+                    closestDist = dist
                 end
             end
         end
@@ -515,143 +330,90 @@ local function FindClosestEnemy()
     return closest
 end
 
-local function UpdateAimbot()
-    if not Config.Aimbot.Enabled or not LocalPlayer or not LocalPlayer.Character then return end
+local function Aimbot_Update()
+    if not ButtonStates["aimbot"] or not LocalPlayer.Character then return end
     
     local target = FindClosestEnemy()
     if target then
-        local targetPos = target.Position + target.AssemblyLinearVelocity * 0.15
-        
-        if Config.Aimbot.SilentAim then
-            -- Silent Aim: Adjust camera to aim at target
-            local newCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-            Camera.CFrame = Camera.CFrame:Lerp(newCFrame, Config.Aimbot.Smoothness * Config.Aimbot.Strength)
-        else
-            -- Regular Aimbot: Move camera smoothly
-            local newCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-            Camera.CFrame = Camera.CFrame:Lerp(newCFrame, Config.Aimbot.Smoothness * Config.Aimbot.Strength)
-        end
+        local newCFrame = CFrame.new(Camera.CFrame.Position, target.Position)
+        Camera.CFrame = Camera.CFrame:Lerp(newCFrame, 0.1)
     end
 end
 
-print("[TWISTEDHOOK] Aimbot system loaded")
+-- ==================== FOV CIRCLE ====================
+local FOVGui = ScreenGui:FindFirstChild("FOVCanvas")
+if not FOVGui then
+    FOVGui = Instance.new("Frame")
+    FOVGui.Name = "FOVCanvas"
+    FOVGui.Size = UDim2.new(1, 0, 1, 0)
+    FOVGui.BackgroundTransparency = 1
+    FOVGui.BorderSizePixel = 0
+    FOVGui.ZIndex = 0
+    FOVGui.Parent = ScreenGui
+end
 
--- ==================== SKIN CHANGER ====================
-local function ChangeSkin()
-    if not Config.Skins.Enabled or not LocalPlayer or not LocalPlayer.Character then return end
+local function FOV_Update()
+    FOVGui:ClearAllChildren()
     
-    pcall(function()
-        local character = LocalPlayer.Character
-        if not character then return end
+    if not ButtonStates["fov"] or not ButtonStates["aimbot"] then
+        return
+    end
+    
+    local centerX = Mouse.X
+    local centerY = Mouse.Y
+    local radius = Config.Aimbot.FOV
+    
+    for i = 1, 30 do
+        local angle1 = (i - 1) * (2 * math.pi / 30)
+        local angle2 = i * (2 * math.pi / 30)
         
-        local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+        local x1 = math.cos(angle1) * radius
+        local y1 = math.sin(angle1) * radius
+        local x2 = math.cos(angle2) * radius
+        local y2 = math.sin(angle2) * radius
         
-        if humanoidRootPart then
-            for _, part in pairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.Color = Config.Skins.SkinColor
-                    part.Material = Enum.Material.Neon
-                end
-            end
-        end
-    end)
-end
-
-local lastSkinUpdate = 0
-local function UpdateSkins()
-    if not Config.Skins.Enabled then return end
-    if tick() - lastSkinUpdate < 0.5 then return end
-    
-    lastSkinUpdate = tick()
-    ChangeSkin()
-end
-
-if LocalPlayer then
-    LocalPlayer.CharacterAdded:Connect(function(character)
-        if Config.Skins.Enabled and character then
-            wait(0.1)
-            ChangeSkin()
-        end
-    end)
-end
-
-print("[TWISTEDHOOK] Skin changer loaded")
-
--- ==================== SPEED BOOST ====================
-local OriginalSpeed = 16
-
-local function UpdateSpeed()
-    if not LocalPlayer or not LocalPlayer.Character then return end
-    
-    local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
-    if humanoid then
-        if Config.Speed.Enabled then
-            humanoid.WalkSpeed = OriginalSpeed * Config.Speed.Value
-        else
-            humanoid.WalkSpeed = OriginalSpeed
-        end
+        local line = Instance.new("Frame")
+        line.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+        line.BorderSizePixel = 0
+        line.ZIndex = 0
+        line.Parent = FOVGui
+        
+        local length = math.sqrt((x2 - x1)^2 + (y2 - y1)^2)
+        local angle = math.atan2(y2 - y1, x2 - x1)
+        
+        line.Size = UDim2.new(0, length, 0, 1)
+        line.Position = UDim2.new(0, centerX + x1, 0, centerY + y1)
+        line.Rotation = math.deg(angle)
     end
 end
 
-if LocalPlayer then
-    LocalPlayer.CharacterAdded:Connect(function(character)
-        if character then
-            OriginalSpeed = 16
-        end
-    end)
-end
-
-print("[TWISTEDHOOK] Speed system loaded")
-
--- ==================== GAME TRANSITION FIX ====================
-game:GetService("RunService").Heartbeat:Connect(function()
-    if not LocalPlayer or not PlayerGui then return end
-    
-    if PlayerGui.Parent ~= LocalPlayer then
-        PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
-        if PlayerGui and MainGui and MainGui.Parent ~= PlayerGui then
-            MainGui.Parent = PlayerGui
-            FOVGui.Parent = PlayerGui
-        end
-    end
-end)
-
-print("[TWISTEDHOOK] Game transition fix loaded")
+print("[TWISTEDHOOK] All systems initialized")
 
 -- ==================== MAIN LOOP ====================
+local UpdateCounter = 0
+
 RunService.Heartbeat:Connect(function()
+    UpdateCounter = UpdateCounter + 1
+    
     pcall(function()
-        UpdateESP()
-        UpdateAimbot()
-        UpdateSpeed()
-        UpdateSkins()
+        -- Update every frame
+        Speed_Update()
+        Aimbot_Update()
+        Skins_Update()
+        
+        -- Update every other frame
+        if UpdateCounter % 2 == 0 then
+            ESP_Update()
+        end
     end)
 end)
 
 RunService.RenderStepped:Connect(function()
     pcall(function()
-        DrawFOVCircle()
+        FOV_Update()
     end)
 end)
 
--- ==================== TOGGLE MENU ====================
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == Enum.KeyCode.P then
-        if MenuFrame then
-            MenuFrame.Visible = not MenuFrame.Visible
-            MinBtn.Visible = not MinBtn.Visible
-        end
-    end
-end)
-
-print("✓✓✓ TWISTEDHOOK v3.2 LOADED ✓✓✓")
-print("✓ ESP working (shows through walls)")
-print("✓ Aimbot + Silent Aim FIXED")
-print("✓ FOV circles (follows mouse) FIXED")
-print("✓ Speed boost FIXED")
-print("✓ Skin changer (neon glow) FIXED")
-print("✓ Game transition fixed")
-print("✓ Press 'P' to toggle menu")
-print("✓ All features optimized and debugged")
+print("✅ TWISTEDHOOK v4.1 LOADED!")
+print("✅ Press 'P' to toggle menu")
+print("✅ All features working!")
